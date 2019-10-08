@@ -1,0 +1,38 @@
+---
+title: "Network-analysis"
+author: "Mathias Flinta"
+date: "11/10/2019"
+output:
+  html_document: 
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    code_folding: hide
+    number_sections: TRUE
+---
+
+Link for google colab:
+
+Link for ?: 
+
+This project is made to be read in html, so open the html file in your preferred webbrowser. As standard the code is hidden in this document, but you can show all by pressing the button "Code" in the top right of the document. You can also show individual chunks of code by pressing the buttons "Code" which are placed around in the document. 
+
+I set my knitr functions. 
+```{r}
+### Knitr options
+knitr::opts_chunk$set(warning=FALSE,
+                     message=FALSE,
+                     fig.align="center"
+                     )
+
+options(warn=-1) # Hides all warnings, as the knitr options only work on local R-Markdown mode. 
+```
+
+I load my packages. 
+```{r}
+library(rmarkdown)
+library(tidyverse)
+```
+
+
+
