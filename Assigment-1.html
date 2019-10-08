@@ -2853,10 +2853,12 @@ div.tocify {
 </div>
 
 
-<p>Link for google colab:</p>
-<p>Link for github for downloading files if there is errors:</p>
+<div id="set-up" class="section level1">
+<h1><span class="header-section-number">1</span> Set-up</h1>
 <p>This project is made to be read in html, so open the html file in your preferred webbrowser. As standard the code is hidden in this document, but you can show all by pressing the button “Code” in the top right of the document. You can also show individual chunks of code by pressing the buttons “Code” which are placed around in the document.</p>
-<p>I set my knitr functions.</p>
+<p>Link for google colab:</p>
+<p>Link for github (in case errors should occur):</p>
+<p>First i have some personal setup in my local R-Markdown on how i want to display warnings ect.</p>
 <pre class="r"><code>### Knitr options
 knitr::opts_chunk$set(warning=FALSE,
                      message=FALSE,
@@ -2864,18 +2866,103 @@ knitr::opts_chunk$set(warning=FALSE,
                      )
 
 options(warn=-1) # Hides all warnings, as the knitr options only work on local R-Markdown mode. </code></pre>
-<p>I load my packages.</p>
+<p>I load my packages for doing the analysis.</p>
 <pre class="r"><code>library(knitr) # For knitr to html
 library(rmarkdown) # For formatting the document
 library(tidyverse) # Standard datasciewnce toolkid (dplyr, ggplot2 et al.)
+library(data.table) # for reading in data ect. 
 library(magrittr) # For advanced piping (%&gt;% et al.)
 library(igraph) # For network analysis
 library(tidygraph) # For tidy-style graph manipulation
 library(ggraph) # For ggplot2 style graph plotting
 library(Matrix) # For some matrix functionality
 library(ggforce) # Awesome plotting</code></pre>
+</div>
+<div id="introduction" class="section level1">
+<h1><span class="header-section-number">2</span> Introduction</h1>
+<p>In this assignment i will analyze a network from 21 managers of a high-tec company in the US.</p>
+<p>Each manager was asked to whom do you go to for <strong>advice</strong> and who is your <strong>friend</strong>, to whom do you <strong>report</strong> was taken from company documents. This forms the 3 binary variables in the dataset: Krack-High-Tec includes the following three 21x21 text matrices:</p>
+<ul>
+<li><p>ADVICE</p></li>
+<li><p>FRIENDSHIP</p></li>
+<li><p>REPORTS_TO</p></li>
+</ul>
+<p>High-Tec-Attributes includes one 21x5 matrix.</p>
+<ul>
+<li><p>ID: Numeric ID of the manager</p></li>
+<li><p>AGE: The managers age (in years)</p></li>
+<li><p>TENURE: The length of service or tenure (in years)</p></li>
+<li><p>LEVEL: The level in the corporate hierarchy (coded 1,2 and 3; 1 = CEO, 2 = Vice President, 3 = manager)</p></li>
+<li><p>DEPT: The department (coded 1,2,3,4 with the CEO in department 0, ie not in a department)</p></li>
+</ul>
+</div>
+<div id="creating-the-network" class="section level1">
+<h1><span class="header-section-number">3</span> Creating the network</h1>
+<p><strong>Task</strong></p>
+<p>Generate network objects for the companies organizational structure (reports to), friendship, advice This networks are generated from the corresponding edgelists Also attach node characteristics from the corresponding nodelist</p>
+<div id="loading-the-data" class="section level2">
+<h2><span class="header-section-number">3.1</span> Loading the data</h2>
+<p>First we will load the data into R.</p>
+<pre class="r"><code>node_attributes &lt;- fread(&quot;https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-Attributes.csv&quot;)
+
+edge_advice &lt;- fread(&quot;https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-Advice.txt&quot;)
+
+edge_friendship &lt;- fread(&quot;https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-Friendship.txt&quot;)
+
+edge_reports_to &lt;- fread(&quot;https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-ReportsTo.txt&quot;)</code></pre>
+<p>To get an understanding of the scope and structure of the data i get the dimensions of the edges of the advice data. It has 3 columns. Column 1 is the “from ID”, column 2 is the “to ID” and column 3 is the binary nr. indicating the presence (=1) or absence (=0) of an edge. And it has 21x21=441 rows.</p>
+<pre class="r"><code>dim(edge_advice)</code></pre>
+<pre><code>## [1] 441   3</code></pre>
+</div>
+<div id="from-edgelist-to-network" class="section level2">
+<h2><span class="header-section-number">3.2</span> From edgelist to network</h2>
+<p>I create my three networks. I have here decided to use the tbl_graph class, which is a thin wrapper around the igraph object. Here we can still use all the igraph function, but also apply the tidy methods.</p>
+<pre class="r"><code>g_advice &lt;- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)
+g_friendship &lt;- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)
+g_reports_to &lt;- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)</code></pre>
+<p>So now we have 3 different undirected, unweighted networks, each displaying 3 different sides/perspectives of the same underlying relations between the 21 managers.</p>
+</div>
+</div>
+<div id="analysis" class="section level1">
+<h1><span class="header-section-number">4</span> Analysis</h1>
+<div id="a-network-level-characteristics" class="section level2">
+<h2><span class="header-section-number">4.1</span> A: Network level characteristics</h2>
+<p>When working with network, it can be beneficial to analyze the network as a whole, before further specific analysis. Here i will calculate 3 key metrics: Density, transistivity, reciprocity for all 3 networks.</p>
+<p>First i analyze edge density. It describes the portion of the potential connections in a network that are actual connections.</p>
+<pre class="r"><code>edge_density(g_advice)</code></pre>
+<pre><code>## [1] 1.05</code></pre>
+<pre class="r"><code>edge_density(g_friendship)</code></pre>
+<pre><code>## [1] 1.05</code></pre>
+<pre class="r"><code>edge_density(g_reports_to)</code></pre>
+<pre><code>## [1] 1.05</code></pre>
+<p>Weird results with 1.05???</p>
+<p>Second i analyze transistivity, also called the clustering coefficient. It measures the proportion of all possible triangles in the network that are closed. Triangles is if a edge exists between three given vertices.</p>
+<pre class="r"><code>transitivity(g_advice)</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>transitivity(g_friendship)</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>transitivity(g_reports_to)</code></pre>
+<pre><code>## [1] 1</code></pre>
+<p>Weird results with 1???</p>
+<p>Third i analyze reciprocity. It is a measure of the likelihood of vertices in a directed network to be mutually linked.</p>
+<pre class="r"><code>reciprocity(g_advice)</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>reciprocity(g_friendship)</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>reciprocity(g_reports_to)</code></pre>
+<pre><code>## [1] 1</code></pre>
+<p>Note???</p>
+<p>To create networks on a higher level of aggregation, you want to aggregate the edgelist the corresponding level before creating a network.</p>
+<p>Questions:</p>
+<ul>
+<li><p>Are relationships like friendship and advice giving usually reciprocal?</p></li>
+<li><p>Are friends of your friends also your friends?</p></li>
+<li><p>Are the employees generally more likely to be in a friendship or advice-seeking relationship?</p></li>
+</ul>
+</div>
+</div>
 <div id="basic-concepts-notes" class="section level1">
-<h1><span class="header-section-number">1</span> Basic concepts notes</h1>
+<h1><span class="header-section-number">5</span> Basic concepts notes</h1>
 <p>The whole system: Network or graph The elements: Nodes/Vertices The connections: Edges or links</p>
 <p>Network is a system of elements and connections between them.</p>
 <p>Edgelist: a dataframe that contains a minimum of two columns, one column of nodes that are the source of a connection and another column of nodes that are the target of the connection. The nodes in the data are identified by unique IDs.</p>
@@ -2887,7 +2974,7 @@ library(ggforce) # Awesome plotting</code></pre>
 <p>Remember removal of a node or edge can impact the rest of the network.</p>
 </div>
 <div id="technical-parts" class="section level1">
-<h1><span class="header-section-number">2</span> Technical parts</h1>
+<h1><span class="header-section-number">6</span> Technical parts</h1>
 <p>We mostly use igraph objects</p>
 <p>Important commands. g is the graph.</p>
 <p>V(g): Inspects vertices</p>
@@ -2897,7 +2984,7 @@ library(ggforce) # Awesome plotting</code></pre>
 <p>g %N&gt;% filter(gender == “F”) Note that filtering nodes will simultaneously result in a filtering of edges. OBS: Nodes can be isolated in a nework, while edges without an adjacent node cannot exist.</p>
 </div>
 <div id="centralities" class="section level1">
-<h1><span class="header-section-number">3</span> Centralities</h1>
+<h1><span class="header-section-number">7</span> Centralities</h1>
 <p>Measure a specific nodes centrality.</p>
 <p><strong>Degree centrality</strong>: Number of edges adjacent to a node.</p>
 <p><strong>Eigenvector centrality</strong>: weight a node’s degree centrality by the centrality of the nodes adjacent to it (and their centrality in turn by their centrality).</p>
@@ -2905,11 +2992,11 @@ library(ggforce) # Awesome plotting</code></pre>
 <p>There is many more… Commands is “centrality_???”</p>
 </div>
 <div id="clustering-community-detection" class="section level1">
-<h1><span class="header-section-number">4</span> Clustering (Community detection)</h1>
+<h1><span class="header-section-number">8</span> Clustering (Community detection)</h1>
 <p>Another common operation is to group nodes based on the graph topology, sometimes referred to as community detection based on its commonality in social network analysis.</p>
 </div>
 <div id="network-level-global" class="section level1">
-<h1><span class="header-section-number">5</span> Network level (global)</h1>
+<h1><span class="header-section-number">9</span> Network level (global)</h1>
 <p><strong>Edge density</strong>: describes the portion of the potential connections in a network that are actual connections.</p>
 <p><strong>Diameter</strong>: It is the shortest distance between the two most distant nodes in the network. In other words, once the shortest path length from every node to all other nodes is calculated, the diameter is the longest of all the calculated path lengths.</p>
 <p><strong>Mean distance</strong>: The average shortest path between two nodes in a network. Also called geodesic.</p>
@@ -2921,7 +3008,7 @@ library(ggforce) # Awesome plotting</code></pre>
 <p>Small worlds are an interesting network structure, combining short path lenght betwen the nodes with a high clustering coefficient. That means, that we have small interconected clusters, which are in turn connected by gatekeepers (the edges we call bridges or structural holes).</p>
 </div>
 <div id="multi-modal-networks" class="section level1">
-<h1><span class="header-section-number">6</span> Multi-modal networks</h1>
+<h1><span class="header-section-number">10</span> Multi-modal networks</h1>
 <p>Now its time to talk about an interesting type of networks, multi-modal. This means, a network has several “modes”, meaning connects entities on different conceptual levels. The most commone one is a 2-mode (or bipartite) network. Examples could be an Author → Paper, Inventor → Patent, Member → Club network. Here, the elements in the different modes represent different things.</p>
 <p>We can alalyse them in sepperation (and sometimes we should), but often its helpful to “project”&quot; them onto one mode. Here, we create a node in one mode by joint association with another mode.</p>
 </div>

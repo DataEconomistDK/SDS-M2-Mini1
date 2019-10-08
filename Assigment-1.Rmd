@@ -11,13 +11,15 @@ output:
     number_sections: TRUE
 ---
 
-Link for google colab:
-
-Link for github for downloading files if there is errors: 
+# Set-up
 
 This project is made to be read in html, so open the html file in your preferred webbrowser. As standard the code is hidden in this document, but you can show all by pressing the button "Code" in the top right of the document. You can also show individual chunks of code by pressing the buttons "Code" which are placed around in the document. 
 
-I set my knitr functions. 
+Link for google colab:
+
+Link for github (in case errors should occur): 
+
+First i have some personal setup in my local R-Markdown on how i want to display warnings ect. 
 ```{r}
 ### Knitr options
 knitr::opts_chunk$set(warning=FALSE,
@@ -28,11 +30,12 @@ knitr::opts_chunk$set(warning=FALSE,
 options(warn=-1) # Hides all warnings, as the knitr options only work on local R-Markdown mode. 
 ```
 
-I load my packages. 
+I load my packages for doing the analysis. 
 ```{r}
 library(knitr) # For knitr to html
 library(rmarkdown) # For formatting the document
 library(tidyverse) # Standard datasciewnce toolkid (dplyr, ggplot2 et al.)
+library(data.table) # for reading in data ect. 
 library(magrittr) # For advanced piping (%>% et al.)
 library(igraph) # For network analysis
 library(tidygraph) # For tidy-style graph manipulation
@@ -40,6 +43,113 @@ library(ggraph) # For ggplot2 style graph plotting
 library(Matrix) # For some matrix functionality
 library(ggforce) # Awesome plotting
 ```
+
+# Introduction
+In this assignment i will analyze a network from 21 managers of a high-tec company in the US. 
+
+Each manager was asked to whom do you go to for **advice** and who is your **friend**, to whom do you **report** was taken from company documents. This forms the 3 binary variables in the dataset: Krack-High-Tec includes the following three 21x21 text matrices:
+
+- ADVICE
+
+- FRIENDSHIP
+
+- REPORTS_TO
+
+High-Tec-Attributes includes one 21x5 matrix.
+
+- ID: Numeric ID of the manager
+
+- AGE: The managers age (in years)
+
+- TENURE: The length of service or tenure (in years)
+
+- LEVEL: The level in the corporate hierarchy (coded 1,2 and 3; 1 = CEO, 2 = Vice President, 3 = manager)
+
+- DEPT: The department (coded 1,2,3,4 with the CEO in department 0, ie not in a department)
+
+# Creating the network
+
+**Task**
+
+Generate network objects for the companies organizational structure (reports to), friendship, advice
+This networks are generated from the corresponding edgelists
+Also attach node characteristics from the corresponding nodelist
+
+## Loading the data
+
+First we will load the data into R. 
+```{r}
+node_attributes <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-Attributes.csv")
+
+edge_advice <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-Advice.txt")
+
+edge_friendship <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-Friendship.txt")
+
+edge_reports_to <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-ReportsTo.txt")
+```
+
+To get an understanding of the scope and structure of the data i get the dimensions of the edges of the advice data. It has 3 columns. Column 1 is the "from ID", column 2 is the "to ID" and column 3 is the binary nr. indicating the presence (=1) or absence (=0) of an edge. And it has 21x21=441 rows. 
+```{r}
+dim(edge_advice)
+```
+
+
+
+## From edgelist to network
+
+I create my three networks. I have here decided to use the tbl_graph class, which is a thin wrapper around the igraph object. Here we can still use all the igraph function, but also apply the tidy methods. 
+```{r}
+g_advice <- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)
+g_friendship <- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)
+g_reports_to <- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)
+```
+
+So now we have 3 different undirected, unweighted networks, each displaying 3 different sides/perspectives of the same underlying relations between the 21 managers. 
+
+# Analysis
+
+## A: Network level characteristics
+
+When working with network, it can be beneficial to analyze the network as a whole, before further specific analysis. Here i will calculate 3 key metrics: Density, transistivity, reciprocity for all 3 networks. 
+
+First i analyze edge density. It describes the portion of the potential connections in a network that are actual connections. 
+```{r}
+edge_density(g_advice)
+edge_density(g_friendship)
+edge_density(g_reports_to)
+```
+Weird results with 1.05???
+
+Second i analyze transistivity, also called the clustering coefficient. It measures the proportion of all possible triangles in the network that are closed. Triangles is if a edge exists between three given vertices. 
+```{r}
+transitivity(g_advice)
+transitivity(g_friendship)
+transitivity(g_reports_to)
+```
+Weird results with 1???
+
+Third i analyze reciprocity. It is a measure of the likelihood of vertices in a directed network to be mutually linked.
+```{r}
+reciprocity(g_advice)
+reciprocity(g_friendship)
+reciprocity(g_reports_to)
+```
+
+
+Note???
+
+To create networks on a higher level of aggregation, you want to aggregate the edgelist the corresponding level before creating a network.
+
+
+
+Questions: 
+
+- Are relationships like friendship and advice giving usually reciprocal?
+
+- Are friends of your friends also your friends?
+
+- Are the employees generally more likely to be in a friendship or advice-seeking relationship?
+
 
 # Basic concepts notes
 
