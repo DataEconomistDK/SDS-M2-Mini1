@@ -30,9 +30,104 @@ options(warn=-1) # Hides all warnings, as the knitr options only work on local R
 
 I load my packages. 
 ```{r}
-library(rmarkdown)
-library(tidyverse)
+library(knitr) # For knitr to html
+library(rmarkdown) # For formatting the document
+library(tidyverse) # Standard datasciewnce toolkid (dplyr, ggplot2 et al.)
+library(magrittr) # For advanced piping (%>% et al.)
+library(igraph) # For network analysis
+library(tidygraph) # For tidy-style graph manipulation
+library(ggraph) # For ggplot2 style graph plotting
+library(Matrix) # For some matrix functionality
+library(ggforce) # Awesome plotting
 ```
+
+# Basic concepts notes
+
+The whole system: Network or graph
+The elements: Nodes/Vertices
+The connections: Edges or links
+
+Network is a system of elements and connections between them. 
+
+Edgelist: a dataframe that contains a minimum of two columns, one column of nodes that are the source of a connection and another column of nodes that are the target of the connection. The nodes in the data are identified by unique IDs.
+
+If the distinction between source and target is meaningful, the network is directed. If the distinction is not meaningful, the network is undirected.
+
+An edge list can also contain additional columns that describe attributes of the edges such as a magnitude aspect for an edge. If the edges have a magnitude attribute the graph is considered weighted (e.g., number of interactions, strenght of friendship).
+
+A second popular form of network representation is the adjacency-matrix (also called socio-matrix). It is represented as a  𝑛∗𝑛  matrix, where  𝑛  stands for the number of elements of which their relationships should be represented. The value in the cell that intercepts row  𝑛  and column  𝑚  indicates if an edge is present (=1) or absent (=0).
+
+Nodelist: Stores information about the nodes. 
+
+Graph data: 
+
+Remember removal of a node or edge can impact the rest of the network. 
+
+# Technical parts
+
+We mostly use igraph objects
+
+Important commands. g is the graph. 
+
+V(g): Inspects vertices
+
+E(g): Inspects edges
+
+%N>% activates nodes
+%E>% activates edges
+
+ex:
+
+g %N>% filter(gender == "F")
+Note that filtering nodes will simultaneously result in a filtering of edges.
+OBS: Nodes can be isolated in a nework, while edges without an adjacent node cannot exist.
+
+# Centralities
+Measure a specific nodes centrality. 
+
+**Degree centrality**: Number of edges adjacent to a node. 
+
+**Eigenvector centrality**: weight a node's degree centrality by the centrality of the nodes adjacent to it (and their centrality in turn by their centrality). 
+
+**Betweenness centrality**: Take every pair of the network and count how many times a node can interrupt the shortest paths (geodesic distance) between the two nodes of the pair. 
+
+There is many more... 
+Commands is "centrality_???"
+
+# Clustering (Community detection)
+Another common operation is to group nodes based on the graph topology, sometimes referred to as community detection based on its commonality in social network analysis.
+
+# Network level (global)
+**Edge density**: describes the portion of the potential connections in a network that are actual connections.
+
+**Diameter**: It is the shortest distance between the two most distant nodes in the network. In other words, once the shortest path length from every node to all other nodes is calculated, the diameter is the longest of all the calculated path lengths.
+
+**Mean distance**: The average shortest path between two nodes in a network. Also called geodesic. 
+
+**Transitivity**: (also known as triads/triangles). So if a edge exists between three given vertices it's a triad. Transitivity is then equivalent to the proportion of all possible triangles in the network that are closed.
+
+**Reciprocity**: Is a measure of the likelihood of vertices in a directed network to be mutually linked. 
+
+**Assortativity**: This is a measure of how preferentially attached vertices are to other vertices with identical attributes. In other words
+
+We often compare the above numbers to random networks of same amount of nodes and density. 
+
+**Cliques**: Cliques are a network where all nodes are adjacent, meaning they are connected to all other nodes in the network. 
+
+
+Small worlds are an interesting network structure, combining short path lenght betwen the nodes with a high clustering coefficient. That means, that we have small interconected clusters, which are in turn connected by gatekeepers (the edges we call bridges or structural holes).
+
+# Multi-modal networks
+Now its time to talk about an interesting type of networks, multi-modal. This means, a network has several "modes", meaning connects entities on different conceptual levels. The most commone one is a 2-mode (or bipartite) network. Examples could be an Author  →  Paper, Inventor  →  Patent, Member  →  Club network. Here, the elements in the different modes represent different things.
+
+We can alalyse them in sepperation (and sometimes we should), but often its helpful to "project"" them onto one mode. Here, we create a node in one mode by joint association with another mode.
+
+
+
+
+
+
+
 
 
 

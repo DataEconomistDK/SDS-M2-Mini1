@@ -2853,8 +2853,9 @@ div.tocify {
 </div>
 
 
-<p>Link for google colab: Link for ?:</p>
-<p>This project is made to be read in html, so open the html file in your preferred webbrowser.</p>
+<p>Link for google colab:</p>
+<p>Link for ?:</p>
+<p>This project is made to be read in html, so open the html file in your preferred webbrowser. As standard the code is hidden in this document, but you can show all by pressing the button “Code” in the top right of the document. You can also show individual chunks of code by pressing the buttons “Code” which are placed around in the document.</p>
 <p>I set my knitr functions.</p>
 <pre class="r"><code>### Knitr options
 knitr::opts_chunk$set(warning=FALSE,
@@ -2864,8 +2865,66 @@ knitr::opts_chunk$set(warning=FALSE,
 
 options(warn=-1) # Hides all warnings, as the knitr options only work on local R-Markdown mode. </code></pre>
 <p>I load my packages.</p>
-<pre class="r"><code>library(rmarkdown)
-library(tidyverse)</code></pre>
+<pre class="r"><code>library(knitr) # For knitr to html
+library(rmarkdown) # For formatting the document
+library(tidyverse) # Standard datasciewnce toolkid (dplyr, ggplot2 et al.)
+library(magrittr) # For advanced piping (%&gt;% et al.)
+library(igraph) # For network analysis
+library(tidygraph) # For tidy-style graph manipulation
+library(ggraph) # For ggplot2 style graph plotting
+library(Matrix) # For some matrix functionality
+library(ggforce) # Awesome plotting</code></pre>
+<div id="basic-concepts-notes" class="section level1">
+<h1><span class="header-section-number">1</span> Basic concepts notes</h1>
+<p>The whole system: Network or graph The elements: Nodes/Vertices The connections: Edges or links</p>
+<p>Network is a system of elements and connections between them.</p>
+<p>Edgelist: a dataframe that contains a minimum of two columns, one column of nodes that are the source of a connection and another column of nodes that are the target of the connection. The nodes in the data are identified by unique IDs.</p>
+<p>If the distinction between source and target is meaningful, the network is directed. If the distinction is not meaningful, the network is undirected.</p>
+<p>An edge list can also contain additional columns that describe attributes of the edges such as a magnitude aspect for an edge. If the edges have a magnitude attribute the graph is considered weighted (e.g., number of interactions, strenght of friendship).</p>
+<p>A second popular form of network representation is the adjacency-matrix (also called socio-matrix). It is represented as a 𝑛∗𝑛 matrix, where 𝑛 stands for the number of elements of which their relationships should be represented. The value in the cell that intercepts row 𝑛 and column 𝑚 indicates if an edge is present (=1) or absent (=0).</p>
+<p>Nodelist: Stores information about the nodes.</p>
+<p>Graph data:</p>
+<p>Remember removal of a node or edge can impact the rest of the network.</p>
+</div>
+<div id="technical-parts" class="section level1">
+<h1><span class="header-section-number">2</span> Technical parts</h1>
+<p>We mostly use igraph objects</p>
+<p>Important commands. g is the graph.</p>
+<p>V(g): Inspects vertices</p>
+<p>E(g): Inspects edges</p>
+<p>%N&gt;% activates nodes %E&gt;% activates edges</p>
+<p>ex:</p>
+<p>g %N&gt;% filter(gender == “F”) Note that filtering nodes will simultaneously result in a filtering of edges. OBS: Nodes can be isolated in a nework, while edges without an adjacent node cannot exist.</p>
+</div>
+<div id="centralities" class="section level1">
+<h1><span class="header-section-number">3</span> Centralities</h1>
+<p>Measure a specific nodes centrality.</p>
+<p><strong>Degree centrality</strong>: Number of edges adjacent to a node.</p>
+<p><strong>Eigenvector centrality</strong>: weight a node’s degree centrality by the centrality of the nodes adjacent to it (and their centrality in turn by their centrality).</p>
+<p><strong>Betweenness centrality</strong>: Take every pair of the network and count how many times a node can interrupt the shortest paths (geodesic distance) between the two nodes of the pair.</p>
+<p>There is many more… Commands is “centrality_???”</p>
+</div>
+<div id="clustering-community-detection" class="section level1">
+<h1><span class="header-section-number">4</span> Clustering (Community detection)</h1>
+<p>Another common operation is to group nodes based on the graph topology, sometimes referred to as community detection based on its commonality in social network analysis.</p>
+</div>
+<div id="network-level-global" class="section level1">
+<h1><span class="header-section-number">5</span> Network level (global)</h1>
+<p><strong>Edge density</strong>: describes the portion of the potential connections in a network that are actual connections.</p>
+<p><strong>Diameter</strong>: It is the shortest distance between the two most distant nodes in the network. In other words, once the shortest path length from every node to all other nodes is calculated, the diameter is the longest of all the calculated path lengths.</p>
+<p><strong>Mean distance</strong>: The average shortest path between two nodes in a network. Also called geodesic.</p>
+<p><strong>Transitivity</strong>: (also known as triads/triangles). So if a edge exists between three given vertices it’s a triad. Transitivity is then equivalent to the proportion of all possible triangles in the network that are closed.</p>
+<p><strong>Reciprocity</strong>: Is a measure of the likelihood of vertices in a directed network to be mutually linked.</p>
+<p><strong>Assortativity</strong>: This is a measure of how preferentially attached vertices are to other vertices with identical attributes. In other words</p>
+<p>We often compare the above numbers to random networks of same amount of nodes and density.</p>
+<p><strong>Cliques</strong>: Cliques are a network where all nodes are adjacent, meaning they are connected to all other nodes in the network.</p>
+<p>Small worlds are an interesting network structure, combining short path lenght betwen the nodes with a high clustering coefficient. That means, that we have small interconected clusters, which are in turn connected by gatekeepers (the edges we call bridges or structural holes).</p>
+</div>
+<div id="multi-modal-networks" class="section level1">
+<h1><span class="header-section-number">6</span> Multi-modal networks</h1>
+<p>Now its time to talk about an interesting type of networks, multi-modal. This means, a network has several “modes”, meaning connects entities on different conceptual levels. The most commone one is a 2-mode (or bipartite) network. Examples could be an Author → Paper, Inventor → Patent, Member → Club network. Here, the elements in the different modes represent different things.</p>
+<p>We can alalyse them in sepperation (and sometimes we should), but often its helpful to “project”&quot; them onto one mode. Here, we create a node in one mode by joint association with another mode.</p>
+</div>
 
 
 
