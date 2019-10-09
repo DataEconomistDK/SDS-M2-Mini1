@@ -42,6 +42,10 @@ library(tidygraph) # For tidy-style graph manipulation
 library(ggraph) # For ggplot2 style graph plotting
 library(Matrix) # For some matrix functionality
 library(ggforce) # Awesome plotting
+library(kableExtra) # Formatting for tables
+
+# I set a seed for reproduciability
+set.seed(123)
 ```
 
 # Introduction
@@ -77,63 +81,139 @@ Also attach node characteristics from the corresponding nodelist
 
 ## Loading the data
 
-First we will load the data into R. 
+First we will load the data into R. I also rename the column names for the edge list. 
 ```{r}
 node_attributes <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-Attributes.csv")
 
-edge_advice <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-Advice.txt")
+edge_advice_raw <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-Advice.txt")
 
-edge_friendship <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-Friendship.txt")
+edge_friendship_raw <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-Friendship.txt")
 
-edge_reports_to <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-ReportsTo.txt")
+edge_reports_to_raw <- fread("https://raw.githubusercontent.com/SDS-AAU/M2-2019/master/notebooks/assignments/assignment_1/data/Krack-High-Tec-edgelist-ReportsTo.txt")
+
+Column_names <- c("from", "to", "edge")
+
+colnames(edge_advice_raw) <- Column_names
+colnames(edge_friendship_raw) <- Column_names
+colnames(edge_reports_to_raw) <- Column_names
 ```
 
 To get an understanding of the scope and structure of the data i get the dimensions of the edges of the advice data. It has 3 columns. Column 1 is the "from ID", column 2 is the "to ID" and column 3 is the binary nr. indicating the presence (=1) or absence (=0) of an edge. And it has 21x21=441 rows. 
 ```{r}
-dim(edge_advice)
+dim(edge_advice_raw)
 ```
+In this case we need to do further preperation with the edge list, as we need to format it so that the row only exists if column 3 indicates presence of a connection. Otherwise all further analysis will just interpret it as every vertex being connected, as it does not read the 3 column. Therefore i filter all 3 edge lists, so that i remove rows where no edge exist. 
 
+```{r}
+edge_advice <- edge_advice_raw %>% 
+  filter(edge == 1)
 
+edge_friendship <- edge_friendship_raw %>% 
+  filter(edge == 1)
+
+edge_reports_to <- edge_reports_to_raw %>% 
+  filter(edge == 1)
+```
 
 ## From edgelist to network
 
 I create my three networks. I have here decided to use the tbl_graph class, which is a thin wrapper around the igraph object. Here we can still use all the igraph function, but also apply the tidy methods. 
 ```{r}
 g_advice <- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)
-g_friendship <- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)
-g_reports_to <- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)
+g_friendship <- tbl_graph(edges = edge_friendship, nodes = node_attributes, directed = TRUE)
+g_reports_to <- tbl_graph(edges = edge_reports_to, nodes = node_attributes, directed = TRUE)
 ```
 
-So now we have 3 different undirected, unweighted networks, each displaying 3 different sides/perspectives of the same underlying relations between the 21 managers. 
+So now we have 3 different directed, unweighted networks, each displaying 3 different sides/perspectives of the same underlying relations between the 21 managers. 
 
 # Analysis
 
 ## A: Network level characteristics
 
-When working with network, it can be beneficial to analyze the network as a whole, before further specific analysis. Here i will calculate 3 key metrics: Density, transistivity, reciprocity for all 3 networks. 
+When working with network, it can be beneficial to analyze the network as a whole, before further specific analysis. To start of i do a plot off all three networks together, just to get a impression of how the networks are. Then i will calculate 3 key metrics: Density, transistivity, reciprocity for all 3 networks. These a key figures that can indicate more precisly the nature of the network. Then i will use this to answer the questions about the networks. 
 
-First i analyze edge density. It describes the portion of the potential connections in a network that are actual connections. 
+Note: Make more fancy plot. Plot titles for each graph. 
 ```{r}
-edge_density(g_advice)
-edge_density(g_friendship)
-edge_density(g_reports_to)
+par(mfrow=c(1,3))
+set.seed(123)
+plot(g_advice)
+set.seed(123)
+plot(g_friendship)
+set.seed(123)
+plot(g_reports_to)
 ```
-Weird results with 1.05???
 
-Second i analyze transistivity, also called the clustering coefficient. It measures the proportion of all possible triangles in the network that are closed. Triangles is if a edge exists between three given vertices. 
-```{r}
-transitivity(g_advice)
-transitivity(g_friendship)
-transitivity(g_reports_to)
-```
-Weird results with 1???
+Just based on these plots, we can see some patterns. For the first graph based on the question, "to whom do you go to for **advice**", we see that most managers go to several other managers for advice, indicated by the many edges. For the second graph based on the question "who is your **friend**?", we see less edges than before. We also see that all managers have at least one friend, and it seems like most have a couple of friends. Also we see that it does not always go both ways indicated by the arrow in only one direction. The third graph based on the question, "to whom do you **report**" was taken from company documents, and here we see very few edges. All managers only reports to one other manager, indicating the chain of command in the company, leading up to one manager in the middle being the CEO. Now i will use the key figures from the below table to get further insights. 
 
-Third i analyze reciprocity. It is a measure of the likelihood of vertices in a directed network to be mutually linked.
 ```{r}
-reciprocity(g_advice)
-reciprocity(g_friendship)
-reciprocity(g_reports_to)
+# Edge density
+advice_density <- edge_density(g_advice)
+friendship_density <- edge_density(g_friendship)
+reports_to_density <- edge_density(g_reports_to)
+# Transitivity
+advice_trans <- transitivity(g_advice)
+friendship_trans <- transitivity(g_friendship)
+reports_to_trans <- transitivity(g_reports_to)
+# Reciprocity
+advice_reci <- reciprocity(g_advice)
+friendship_reci <- reciprocity(g_friendship)
+reports_to_reci <- reciprocity(g_reports_to)
+# I make a matrix of the key metrics
+key_metrics_vector <- c(advice_density, friendship_density, reports_to_density, 
+                 advice_trans, friendship_trans, reports_to_trans, 
+                 advice_reci, friendship_reci, reports_to_reci)
+key_metrics_m <- matrix(round(key_metrics_vector, 3), 3, 3, byrow = TRUE)
+# I give the matrix names
+colnames(key_metrics_m) <- c("Advice", "Friendship", "Reports to")
+rownames(key_metrics_m) <- c("Edge density", "Transitivity", "Reciprocity")
+# I format it nicely in a table
+kable(key_metrics_m) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right")
 ```
+
+Note: Should i do random networks to control these relative numbers???
+
+Edge density describes the portion of the potential connections in a network that are actual connections. For the advice network we see that the edge density is at `r round(advice_density, 3)`, which means that the managers on average ask almost 50% of the other managers for advice. The friendship network the edge density is at `r round(friendship_density, 3)`, which means that the managers on average are friends with about 25% of the other managers. The reports to network have a edge density at `r round(reports_to_density, 3)`, which is very low and indicates that there is only one chain of command. So overall we see that employess are more likely to have a advice-seeking relationsship than a friendship. 
+
+Transistivity, also called the clustering coefficient. It measures the proportion of all possible triangles in the network that are closed. Triangles is if a edge exists between three given vertices. For the advice network we see it's at `r round(advice_trans, 3)`, indicating that about 74% of all ???
+
+**Are friends of your friends also your friends? (how to do it???). How to understand. If i indicate a node as a friend, does the nodes he indicates as friends then indicate me as a friend?**
+
+Reciprocity measures the likelihood of vertices in a directed network to be mutually linked. For the advice network we see it's at `r round(advice_reci, 3)`, indicating that about 47% of managers get advice from the same managers they ask for advice. For the friendship network we see almost the same level of reciprocity at `r round(friendship_reci, 3)`, which states that only 45% of managers have indicated other managers as friends, where that managers have indicated him as a friend aswell. This means that 55% of managers does not have mutual friendships, when asked for in this survey. Overall we could say that relationsships like friendship and advice are not likely to be reciprocal, as they are both less than 50%. Off course this might be caused by the respondents defining friendsship in different ways, but here we must read the research paper to get further insights to this. Reciprocity for the reports to network is 0%, as the chain of command only goes in one direction. 
+
+## B: Node level characteristics
+
+Who is most popular in the networks. Who is the most wanted friend, and advice giver?
+To figure out who is the most popular i calculate the degree of incoming edges in the 2 networks friendship and advice. These can be said to be the most wanted friend or advicer. 
+
+```{r}
+g_advice_in <- degree(g_advice, mode = c("in"))
+g_friendship_in <- degree(g_friendship, mode = c("in"))
+
+# I make the data matrix with the most popular
+popular_vector <- c(max(g_advice_in), max(g_friendship_in), which.max(g_advice_in), which.max(g_friendship_in))
+popular_m <- matrix(popular_vector, 2, 2, byrow = TRUE)
+
+# I give the matrix names
+colnames(popular_m) <- c("Most popular advicer", "Most popular friend")
+rownames(popular_m) <- c("Nr. of connections", "ID nr.")
+# I format it nicely in a table
+kable(popular_m) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right")
+```
+In this case we see that the most popular advicer and friend is the same persion with the ID nr. 2. This manager has 18 people asking him advice and 10 people consider him their friend. This is quite a lot in a network of 21 managers. 
+
+Are managers in higher hirarchy more popular as friend, and advice giver?
+
+- LEVEL: The level in the corporate hierarchy (coded 1,2 and 3; 1 = CEO, 2 = Vice President, 3 = manager)
+
+I can plot this grouped by level to get a visual of it. I can also calculate the mean of degree in the 3 groupings. 
+
+
+## C: Relational Characteristics
+
+Are managers from the same 1. department, or on the same 2. hirarchy, 3. age, or 4. tenuere more likely to become friends or give advice? (hint: assortiativity related)
+Are friends more likely to give each others advice?
 
 
 Note???
@@ -142,13 +222,14 @@ To create networks on a higher level of aggregation, you want to aggregate the e
 
 
 
-Questions: 
 
-- Are relationships like friendship and advice giving usually reciprocal?
 
-- Are friends of your friends also your friends?
 
-- Are the employees generally more likely to be in a friendship or advice-seeking relationship?
+
+
+
+
+
 
 
 # Basic concepts notes
