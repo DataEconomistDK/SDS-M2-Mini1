@@ -11,15 +11,17 @@ output:
     number_sections: TRUE
 ---
 
-# Set-up
+# Introduction and set-up
+
+In this assignment i will analyze a network from 21 managers of a high-tec company in the US. Each manager was asked to whom do you go to for **advice** and who is your **friend**, to whom do you **report** was taken from company documents. I will explain further about the variables when it's being analyzed. 
 
 This project is made to be read in html, so open the html file in your preferred webbrowser. As standard the code is hidden in this document, but you can show all by pressing the button "Code" in the top right of the document. You can also show individual chunks of code by pressing the buttons "Code" which are placed around in the document. 
 
-Link for google colab:
+Link for google colab: https://colab.research.google.com/drive/1jxhpHMPpBM7ReDfTKuaNoaAfWT8L8uGt 
 
-Link for github (in case errors should occur): 
+Link for github (backup for download): https://github.com/DataEconomistDK/SDS-M2-Mini1 
 
-First i have some personal setup in my local R-Markdown on how i want to display warnings ect. 
+First i have some personal setup in my local R-Markdown on how i want to display warnings ect. And then i load my packages. 
 ```{r}
 ### Knitr options
 knitr::opts_chunk$set(warning=FALSE,
@@ -30,8 +32,9 @@ knitr::opts_chunk$set(warning=FALSE,
 options(warn=-1) # Hides all warnings, as the knitr options only work on local R-Markdown mode. 
 ```
 
-I load my packages for doing the analysis. 
+
 ```{r}
+# Packages
 library(knitr) # For knitr to html
 library(rmarkdown) # For formatting the document
 library(tidyverse) # Standard datasciewnce toolkid (dplyr, ggplot2 et al.)
@@ -43,41 +46,13 @@ library(ggraph) # For ggplot2 style graph plotting
 library(Matrix) # For some matrix functionality
 library(ggforce) # Awesome plotting
 library(kableExtra) # Formatting for tables
+library(car) # recode functions
 
 # I set a seed for reproduciability
-set.seed(123)
+set.seed(123) # Have to be set every time a rng proces is being made. 
 ```
 
-# Introduction
-In this assignment i will analyze a network from 21 managers of a high-tec company in the US. 
-
-Each manager was asked to whom do you go to for **advice** and who is your **friend**, to whom do you **report** was taken from company documents. This forms the 3 binary variables in the dataset: Krack-High-Tec includes the following three 21x21 text matrices:
-
-- ADVICE
-
-- FRIENDSHIP
-
-- REPORTS_TO
-
-High-Tec-Attributes includes one 21x5 matrix.
-
-- ID: Numeric ID of the manager
-
-- AGE: The managers age (in years)
-
-- TENURE: The length of service or tenure (in years)
-
-- LEVEL: The level in the corporate hierarchy (coded 1,2 and 3; 1 = CEO, 2 = Vice President, 3 = manager)
-
-- DEPT: The department (coded 1,2,3,4 with the CEO in department 0, ie not in a department)
-
 # Creating the network
-
-**Task**
-
-Generate network objects for the companies organizational structure (reports to), friendship, advice
-This networks are generated from the corresponding edgelists
-Also attach node characteristics from the corresponding nodelist
 
 ## Loading the data
 
@@ -102,7 +77,7 @@ To get an understanding of the scope and structure of the data i get the dimensi
 ```{r}
 dim(edge_advice_raw)
 ```
-In this case we need to do further preperation with the edge list, as we need to format it so that the row only exists if column 3 indicates presence of a connection. Otherwise all further analysis will just interpret it as every vertex being connected, as it does not read the 3 column. Therefore i filter all 3 edge lists, so that i remove rows where no edge exist. 
+In this case we need to do further preperation with the edge list, as we need to format it so that the row only exists if column 3 indicates presence of a connection. Otherwise all further analysis will just interpret it as every vertex being connected, as it does not read the third column. Therefore i filter all three edge lists, so that i remove rows where no edge exist. 
 
 ```{r}
 edge_advice <- edge_advice_raw %>% 
@@ -117,7 +92,7 @@ edge_reports_to <- edge_reports_to_raw %>%
 
 ## From edgelist to network
 
-I create my three networks. I have here decided to use the tbl_graph class, which is a thin wrapper around the igraph object. Here we can still use all the igraph function, but also apply the tidy methods. 
+I create my three networks from the 3 edge lists: reports to, friendship and advice, and attaching the node attributes to each network. I have here decided to use the tbl_graph class, which is a thin wrapper around the igraph object. Here we can still use all the igraph function, but also apply the tidy methods. 
 ```{r}
 g_advice <- tbl_graph(edges = edge_advice, nodes = node_attributes, directed = TRUE)
 g_friendship <- tbl_graph(edges = edge_friendship, nodes = node_attributes, directed = TRUE)
@@ -143,7 +118,7 @@ set.seed(123)
 plot(g_reports_to)
 ```
 
-Just based on these plots, we can see some patterns. For the first graph based on the question, "to whom do you go to for **advice**", we see that most managers go to several other managers for advice, indicated by the many edges. For the second graph based on the question "who is your **friend**?", we see less edges than before. We also see that all managers have at least one friend, and it seems like most have a couple of friends. Also we see that it does not always go both ways indicated by the arrow in only one direction. The third graph based on the question, "to whom do you **report**" was taken from company documents, and here we see very few edges. All managers only reports to one other manager, indicating the chain of command in the company, leading up to one manager in the middle being the CEO. Now i will use the key figures from the below table to get further insights. 
+Just based on these plots, we can see some patterns. For the first graph (on the left) based on the question, "to whom do you go to for **advice**", we see that most managers go to several other managers for advice, indicated by the many edges. For the second graph (in the middle) based on the question "who is your **friend**?", we see less edges than before. We also see that all managers have at least one friend, and it seems like most have a couple of friends. Also we see that it does not always go both ways indicated by the arrow in only one direction. The third graph (on the right) based on the question, "to whom do you **report**" was taken from company documents, and here we see very few edges. All managers only reports to one other manager, indicating the chain of command in the company, leading up to one manager in the middle being the CEO. Now i will use the key figures from the below table to get further insights. 
 
 ```{r}
 # Edge density
@@ -261,15 +236,15 @@ From the table we see that in general there is a positive correlation for the di
 # Friends giving advice
 ## Are friends more likely to give each others advice?
 ```{r}
-reci_friends <- E(g_friendship)[[which_mutual(g_friendship, es = E(g_friendship))]]
-reci_friends
-E(g_advice)[[reci_friends]]
+#reci_friends <- E(g_friendship)[[which_mutual(g_friendship, es = E(g_friendship))]]
+#reci_friends
+#E(g_advice)[[reci_friends]]
 ```
 
 ```{r}
-which_mutual(g_friendship, es = E(g_friendship))
+#which_mutual(g_friendship, es = E(g_friendship))
 
-which_mutual(g_advice, es = E(g_advice))
+#which_mutual(g_advice, es = E(g_advice))
 ```
 
 Friends:
@@ -283,6 +258,52 @@ Advice:
 Reconstruct the advice and friendship network on the aggregated level of departments, where nodes represent departments and edges the number of cross departmental friendships/advice relationships.
 
 Note: To create networks on a higher level of aggregation, you want to aggregate the edgelist the corresponding level before creating a network.
+
+Nodes: Departments
+DEPT: The department (coded 1,2,3,4 with the CEO in department 0, ie not in a department)
+
+Edges: Cross department connections of friendsship/advice
+
+## Joining graphs
+
+First i join the two graphs friendship and advice. 
+
+```{r}
+edge_aggr <- bind_rows(edge_advice, edge_friendship)
+
+g_aggr <- tbl_graph(edges = edge_aggr, nodes = node_attributes, directed = TRUE)
+
+g_aggr 
+
+g_aggr %N>%
+  group_by(DEPT)
+
+node_attributes %>% 
+  group_by(DEPT) %>%
+  pull()
+
+node_attributes$DEPT
+
+node_attributes$ID
+
+
+from <- recode(var = edge_aggr$from, recodes = "node_attributes$ID=node_attributes$DEPT")
+
+node_attributes$DEPT
+from
+edge_aggr$from
+
+edge_aggr$from %>% 
+  recode(id = dept)
+```
+
+
+```{r}
+g <- g_friendship %>%
+  graph_join(g_advice, by = "ID") %>%
+  graph_join(g_work, by = "name")
+```
+
 
 # Visualization
 
@@ -309,6 +330,7 @@ g_friendship_out <- degree(g_friendship, mode = c("out"))
 g_friendship_dif <- g_friendship_in-g_friendship_out
 g_friendship_dif
 ```
+
 I calculate centrality. 
 ```{r}
 g_advice_cent <- g_advice %N>%
@@ -321,14 +343,12 @@ g_friendship_cent <- g_friendship %N>%
          centrality_between = centrality_betweenness(directed = TRUE))
 ```
 
+**Eigenvector centrality**: weight a node's degree centrality by the centrality of the nodes adjacent to it (and their centrality in turn by their centrality). 
+
+**Betweenness centrality**: Take every pair of the network and count how many times a node can interrupt the shortest paths (geodesic distance) between the two nodes of the pair. 
+
 ## Plotting
 
-
-
-
-```{r}
-g_advice_cent
-```
 
 
 ```{r}
@@ -347,59 +367,20 @@ g_advice_cent %>%
 ```
 
 
-
-# Notes
-
-## Join networks
 ```{r}
-g <- g_friendship %>%
-  graph_join(g_advice, by = "ID")
+set.seed(123)
+g_friendship_cent %>% 
+  ggraph(layout = 'nicely') + 
+  geom_edge_fan(aes() # Notice that
+                ) +
+  geom_node_point(aes(size = centrality_eigen,
+                    color = g_friendship_dif, # Notice that
+                    shape = as.factor(LEVEL)),
+                  show.legend = TRUE) +
+  scale_colour_gradient(low = "red", high = "green") +
+  theme_graph() +
+  scale_edge_alpha("Edge direction", guide = "edge_direction")
 ```
-
-
-
-# Centralities
-Measure a specific nodes centrality. 
-
-**Degree centrality**: Number of edges adjacent to a node. 
-
-**Eigenvector centrality**: weight a node's degree centrality by the centrality of the nodes adjacent to it (and their centrality in turn by their centrality). 
-
-**Betweenness centrality**: Take every pair of the network and count how many times a node can interrupt the shortest paths (geodesic distance) between the two nodes of the pair. 
-
-There is many more... 
-Commands is "centrality_???"
-
-# Clustering (Community detection)
-Another common operation is to group nodes based on the graph topology, sometimes referred to as community detection based on its commonality in social network analysis.
-
-# Network level (global)
-**Edge density**: describes the portion of the potential connections in a network that are actual connections.
-
-**Diameter**: It is the shortest distance between the two most distant nodes in the network. In other words, once the shortest path length from every node to all other nodes is calculated, the diameter is the longest of all the calculated path lengths.
-
-**Mean distance**: The average shortest path between two nodes in a network. Also called geodesic. 
-
-**Transitivity**: (also known as triads/triangles). So if a edge exists between three given vertices it's a triad. Transitivity is then equivalent to the proportion of all possible triangles in the network that are closed.
-
-**Reciprocity**: Is a measure of the likelihood of vertices in a directed network to be mutually linked. 
-
-**Assortativity**: This is a measure of how preferentially attached vertices are to other vertices with identical attributes. In other words
-
-We often compare the above numbers to random networks of same amount of nodes and density. 
-
-**Cliques**: Cliques are a network where all nodes are adjacent, meaning they are connected to all other nodes in the network. 
-
-
-Small worlds are an interesting network structure, combining short path lenght betwen the nodes with a high clustering coefficient. That means, that we have small interconected clusters, which are in turn connected by gatekeepers (the edges we call bridges or structural holes).
-
-# Multi-modal networks
-Now its time to talk about an interesting type of networks, multi-modal. This means, a network has several "modes", meaning connects entities on different conceptual levels. The most commone one is a 2-mode (or bipartite) network. Examples could be an Author  →  Paper, Inventor  →  Patent, Member  →  Club network. Here, the elements in the different modes represent different things.
-
-We can alalyse them in sepperation (and sometimes we should), but often its helpful to "project"" them onto one mode. Here, we create a node in one mode by joint association with another mode.
-
-
-
 
 
 
