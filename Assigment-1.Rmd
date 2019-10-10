@@ -30,6 +30,8 @@ knitr::opts_chunk$set(warning=FALSE,
                      )
 
 options(warn=-1) # Hides all warnings, as the knitr options only work on local R-Markdown mode. 
+
+Sys.setenv(LANG = "en")
 ```
 
 
@@ -266,7 +268,50 @@ Edges: Cross department connections of friendsship/advice
 
 ## Joining graphs
 
-First i join the two graphs friendship and advice. 
+```{r}
+node_attributes$DEPT
+node_attributes$ID
+
+edge_advice_raw$from_dept
+edge_advice_raw$to_dept
+```
+
+
+First i create a double for loop, with a IF statements that transforms the ID in the from and to column to the department nr. into new columns, for both networks. (Note: evt. gør det med de cleanede df som er kombineret). 
+```{r}
+edge_advice_raw$from_dept <- NA
+for (i in 1:441) {
+  for (j in 1:21) {
+    if (edge_advice_raw$from[i] == node_attributes$ID[j]) {
+      edge_advice_raw$from_dept[i] <- node_attributes$DEPT[j]
+      break }}}
+
+edge_advice_raw$to_dept <- NA
+for (i in 1:441) {
+  for (j in 1:21) {
+    if (edge_advice_raw$to[i] == node_attributes$ID[j]) {
+      edge_advice_raw$to_dept[i] <- node_attributes$DEPT[j]
+      break }}}
+
+edge_friendship_raw$from_dept <- NA
+for (i in 1:441) {
+  for (j in 1:21) {
+    if (edge_friendship_raw$from[i] == node_attributes$ID[j]) {
+      edge_friendship_raw$from_dept[i] <- node_attributes$DEPT[j]
+      break }}}
+
+edge_friendship_raw$to_dept <- NA
+for (i in 1:441) {
+  for (j in 1:21) {
+    if (edge_friendship_raw$to[i] == node_attributes$ID[j]) {
+      edge_friendship_raw$to_dept[i] <- node_attributes$DEPT[j]
+      break }}}
+```
+
+```{r}
+edge_advice_raw
+```
+
 
 ```{r}
 edge_aggr <- bind_rows(edge_advice, edge_friendship)
@@ -274,82 +319,45 @@ edge_aggr <- bind_rows(edge_advice, edge_friendship)
 g_aggr <- tbl_graph(edges = edge_aggr, nodes = node_attributes, directed = TRUE)
 
 g_aggr 
-
-g_aggr %N>%
-  group_by(DEPT)
-
-node_attributes %>% 
-  group_by(DEPT) %>%
-  pull()
-
-node_attributes$DEPT
-
-node_attributes$ID
-
-
-from <- recode(var = edge_aggr$from, recodes = "node_attributes$ID=node_attributes$DEPT")
-
-node_attributes$DEPT
-from
-edge_aggr$from
-
-edge_aggr$from %>% 
-  recode(id = dept)
 ```
 
 
 ```{r}
 g <- g_friendship %>%
-  graph_join(g_advice, by = "ID") %>%
-  graph_join(g_work, by = "name")
+  graph_join(g_advice, by = "ID")
 ```
 
 
 # Visualization
 
-2 graphs (friends and advice)
+For this final task, i want to visualize the two graph networks with advice and friendship, and highlight key variables to get new insights. 
 
-Stats:
-size, color, shape, alpha, text
-
-node: color: diff degree (advice: asked or asker, friend: reprocity of friendship)
-node: size: centrality (eigen or betweenness)
-node: shape: level of hierarchy
-
-edge: arrow/alpha for direction, green for both ways, and red for one way
-
-I calculate degree dif. 
+Based on the previous analysis, it seemed that there in general was a great difference between the degrees for in and out. This was also indicated by reciprocity only being about 45%-47% for these two networks. To get further insights i calculated the difference between in and out degress for all nodes in the two networks. So a positive value indicates more in, than out degress and the opposite for negative values. 
 ```{r}
 g_advice_in <- degree(g_advice, mode = c("in"))
 g_advice_out <- degree(g_advice, mode = c("out"))
-g_advice_dif <- g_advice_in-g_advice_out
-g_advice_dif
+degree_difference_advice <- g_advice_in-g_advice_out
 
 g_friendship_in <- degree(g_friendship, mode = c("in"))
 g_friendship_out <- degree(g_friendship, mode = c("out"))
-g_friendship_dif <- g_friendship_in-g_friendship_out
-g_friendship_dif
+degree_difference_friendship <- g_friendship_in-g_friendship_out
+
 ```
 
-I calculate centrality. 
+I then calculate the **Eigenvector centrality**. This metric weights a node's degree centrality by the centrality of the nodes adjacent to it, and their centrality in turn by their centrality. 
 ```{r}
 g_advice_cent <- g_advice %N>%
-  mutate(centrality_eigen = centrality_eigen(directed = TRUE, scale = TRUE), 
-         centrality_between = centrality_betweenness(directed = TRUE), 
-         g_advice_dif = g_advice_dif)
+  mutate(centrality_eigen = centrality_eigen(directed = TRUE, scale = TRUE),
+         degree_difference = degree_difference_advice)
 
 g_friendship_cent <- g_friendship %N>%
   mutate(centrality_eigen = centrality_eigen(directed = TRUE, scale = TRUE), 
-         centrality_between = centrality_betweenness(directed = TRUE))
+         degree_difference = degree_difference_friendship)
 ```
 
-**Eigenvector centrality**: weight a node's degree centrality by the centrality of the nodes adjacent to it (and their centrality in turn by their centrality). 
+Now i plot the two different networks based on these calculated variables. The degree difference is plotted as a continous color variable for the nodes. Here very green values indicates the relative most popular managers, as they have the most in degrees compared to out degrees. The eigen centrality is plotted as the size of the nodes. The levels of hierarchy are plotted are plotted as the shapes of the nodes. 
 
-**Betweenness centrality**: Take every pair of the network and count how many times a node can interrupt the shortest paths (geodesic distance) between the two nodes of the pair. 
-
-## Plotting
-
-
+Note: edge: arrow/alpha for direction, green for both ways, and red for one way
 
 ```{r}
 set.seed(123)
@@ -358,7 +366,7 @@ g_advice_cent %>%
   geom_edge_fan(aes() # Notice that
                 ) +
   geom_node_point(aes(size = centrality_eigen,
-                    color = g_advice_dif, # Notice that
+                    color = degree_difference, # Notice that
                     shape = as.factor(LEVEL)),
                   show.legend = TRUE) +
   scale_colour_gradient(low = "red", high = "green") +
@@ -374,7 +382,7 @@ g_friendship_cent %>%
   geom_edge_fan(aes() # Notice that
                 ) +
   geom_node_point(aes(size = centrality_eigen,
-                    color = g_friendship_dif, # Notice that
+                    color = degree_difference, # Notice that
                     shape = as.factor(LEVEL)),
                   show.legend = TRUE) +
   scale_colour_gradient(low = "red", high = "green") +
