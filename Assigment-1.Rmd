@@ -168,7 +168,8 @@ colnames(key_metrics_m) <- c("Advice", "Friendship", "Reports to")
 rownames(key_metrics_m) <- c("Edge density", "Transitivity", "Reciprocity")
 # I format it nicely in a table
 kable(key_metrics_m) %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right")
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right") %>% 
+  add_header_above(header = c("Key metrics" = 4)) 
 ```
 
 Note: Should i do random networks to control these relative numbers???
@@ -199,79 +200,163 @@ colnames(popular_m) <- c("Most popular advicer", "Most popular friend")
 rownames(popular_m) <- c("Nr. of connections", "ID nr.")
 # I format it nicely in a table
 kable(popular_m) %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right")
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right") %>% 
+  add_header_above(header = c("Who haves the most incoming degrees?" = 3)) 
 ```
 In this case we see that the most popular advicer and friend is the same persion with the ID nr. 2. This manager has 18 people asking him advice and 10 people consider him their friend. This is quite a lot in a network of 21 managers. 
 
-Are managers in higher hirarchy more popular as friend, and advice giver?
+To answer if managers in higher hirarchy are more popular as friend, and advice giver, i take the in degree calculations from before, and calculate a mean based on each level of corporate hierarchy (coded 1,2 and 3; 1 = CEO, 2 = Vice President, 3 = manager). 
 
-- LEVEL: The level in the corporate hierarchy (coded 1,2 and 3; 1 = CEO, 2 = Vice President, 3 = manager)
+Note: I can plot this grouped by level to get a visual of it.
 
-I can plot this grouped by level to get a visual of it. I can also calculate the mean of degree in the 3 groupings. 
+```{r}
+node_att_degree <- as_tibble(cbind(node_attributes, g_advice_in, g_friendship_in))
 
+hierarchy_stats <- node_att_degree %>% 
+  group_by(LEVEL) %>% 
+  summarise("mean advice" = mean(g_advice_in), 
+            "mean friendship" = mean(g_friendship_in))
+
+kable(hierarchy_stats) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right") %>% 
+  add_header_above(header = c("Incoming degrees" = 3)) 
+```
+In the table we see that it's not a one-sided case. Level 2 (the vice-presidents) are the ones ask the most for advice, and also most people consider them friends. Level 1 (the CEO) are actually asked a little less for advice than level 2, and they have half the amount of people who consider them friends. Level 3 (the managers) are not asked that often for advice compared to the others levels, but they have a decent amount of people who consider them friends. 
 
 ## C: Relational Characteristics
 
-Are managers from the same 1. department, or on the same 2. hirarchy, 3. age, or 4. tenuere more likely to become friends or give advice? (hint: assortiativity related)
-Are friends more likely to give each others advice?
+To answer these relational questions, we can look at assortativity which is a measure of how preferentially attached vertices are to other vertices with identical attributes. Now we will look into several different attributes and see if they create a preference to become friends og give advice. I here create a table with the assortativity coefficients for the 2 different networks and the 4 different attributes. 
+
+```{r}
+# Department
+ass_adv_dep <- assortativity(g_advice, V(g_advice)$DEPT, directed = TRUE)
+ass_friend_dep <- assortativity(g_friendship, V(g_friendship)$DEPT, directed = TRUE)
+# Hierarchy
+ass_adv_hier <- assortativity(g_advice, V(g_advice)$LEVEL, directed = TRUE)
+ass_friend_hier <- assortativity(g_friendship, V(g_friendship)$LEVEL, directed = TRUE)
+# Age
+ass_adv_age <- assortativity(g_advice, V(g_advice)$AGE, directed = TRUE)
+ass_friend_age <- assortativity(g_friendship, V(g_friendship)$AGE, directed = TRUE)
+# Tenure
+ass_adv_tenure <- assortativity(g_advice, V(g_advice)$TENURE, directed = TRUE)
+ass_friend_tenure <- assortativity(g_friendship, V(g_friendship)$TENURE, directed = TRUE)
+
+# Creating fancy matrix
+assortativity_vector <- c(ass_adv_dep, ass_friend_dep, ass_adv_hier, ass_friend_hier, ass_adv_age, ass_friend_age, ass_adv_tenure, ass_friend_tenure)
+
+assortativity_m <- matrix(round(assortativity_vector, 4), 4, 2, byrow = TRUE)
+assortativity_m
+
+# I give the matrix names
+colnames(assortativity_m) <- c("Advice", "Friendship")
+rownames(assortativity_m) <- c("Department", "Hierarchy", "Age", "Tenure")
+# I format it nicely in a table
+kable(assortativity_m) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right") %>% 
+  add_header_above(header = c("Assortativity" = 3)) 
+```
+
+From the table we see that in general there is a positive correlation for the different attributes and giving advice and being friends. There is different noteworthy relations. If you are in the same department you share more advice and are more likely to become friends. This makes great sence, as people in the same department are likely to spend more time together and work on the same projects. People in the same hierarchy do only share a little extra advice, but a way more likely to become friends. People of the same age gives a little extra advice, and extra inclined to become friends. People of same tenure(experience), are more likely to share advice, but for tenure we see that people of same experience are not as likely to become friends as others. This negative coefficient is a weird finding. 
+
+# Friends giving advice
+## Are friends more likely to give each others advice?
+```{r}
+reci_friends <- E(g_friendship)[[which_mutual(g_friendship, es = E(g_friendship))]]
+reci_friends
+E(g_advice)[[reci_friends]]
+```
+
+```{r}
+which_mutual(g_friendship, es = E(g_friendship))
+
+which_mutual(g_advice, es = E(g_advice))
+```
+
+Friends:
+Advice: 
 
 
-Note???
-
-To create networks on a higher level of aggregation, you want to aggregate the edgelist the corresponding level before creating a network.
 
 
+# Aggregated networks
+
+Reconstruct the advice and friendship network on the aggregated level of departments, where nodes represent departments and edges the number of cross departmental friendships/advice relationships.
+
+Note: To create networks on a higher level of aggregation, you want to aggregate the edgelist the corresponding level before creating a network.
+
+# Visualization
+
+2 graphs (friends and advice)
+
+Stats:
+size, color, shape, alpha, text
+
+node: color: diff degree (advice: asked or asker, friend: reprocity of friendship)
+node: size: centrality (eigen or betweenness)
+node: shape: level of hierarchy
+
+edge: arrow/alpha for direction, green for both ways, and red for one way
+
+I calculate degree dif. 
+```{r}
+g_advice_in <- degree(g_advice, mode = c("in"))
+g_advice_out <- degree(g_advice, mode = c("out"))
+g_advice_dif <- g_advice_in-g_advice_out
+g_advice_dif
+
+g_friendship_in <- degree(g_friendship, mode = c("in"))
+g_friendship_out <- degree(g_friendship, mode = c("out"))
+g_friendship_dif <- g_friendship_in-g_friendship_out
+g_friendship_dif
+```
+I calculate centrality. 
+```{r}
+g_advice_cent <- g_advice %N>%
+  mutate(centrality_eigen = centrality_eigen(directed = TRUE, scale = TRUE), 
+         centrality_between = centrality_betweenness(directed = TRUE), 
+         g_advice_dif = g_advice_dif)
+
+g_friendship_cent <- g_friendship %N>%
+  mutate(centrality_eigen = centrality_eigen(directed = TRUE, scale = TRUE), 
+         centrality_between = centrality_betweenness(directed = TRUE))
+```
+
+## Plotting
 
 
 
 
+```{r}
+g_advice_cent
+```
+
+
+```{r}
+set.seed(123)
+g_advice_cent %>% 
+  ggraph(layout = 'nicely') + 
+  geom_edge_fan(aes() # Notice that
+                ) +
+  geom_node_point(aes(size = centrality_eigen,
+                    color = g_advice_dif, # Notice that
+                    shape = as.factor(LEVEL)),
+                  show.legend = TRUE) +
+  scale_colour_gradient(low = "red", high = "green") +
+  theme_graph() +
+  scale_edge_alpha("Edge direction", guide = "edge_direction")
+```
 
 
 
+# Notes
+
+## Join networks
+```{r}
+g <- g_friendship %>%
+  graph_join(g_advice, by = "ID")
+```
 
 
-
-
-# Basic concepts notes
-
-The whole system: Network or graph
-The elements: Nodes/Vertices
-The connections: Edges or links
-
-Network is a system of elements and connections between them. 
-
-Edgelist: a dataframe that contains a minimum of two columns, one column of nodes that are the source of a connection and another column of nodes that are the target of the connection. The nodes in the data are identified by unique IDs.
-
-If the distinction between source and target is meaningful, the network is directed. If the distinction is not meaningful, the network is undirected.
-
-An edge list can also contain additional columns that describe attributes of the edges such as a magnitude aspect for an edge. If the edges have a magnitude attribute the graph is considered weighted (e.g., number of interactions, strenght of friendship).
-
-A second popular form of network representation is the adjacency-matrix (also called socio-matrix). It is represented as a  𝑛∗𝑛  matrix, where  𝑛  stands for the number of elements of which their relationships should be represented. The value in the cell that intercepts row  𝑛  and column  𝑚  indicates if an edge is present (=1) or absent (=0).
-
-Nodelist: Stores information about the nodes. 
-
-Graph data: 
-
-Remember removal of a node or edge can impact the rest of the network. 
-
-# Technical parts
-
-We mostly use igraph objects
-
-Important commands. g is the graph. 
-
-V(g): Inspects vertices
-
-E(g): Inspects edges
-
-%N>% activates nodes
-%E>% activates edges
-
-ex:
-
-g %N>% filter(gender == "F")
-Note that filtering nodes will simultaneously result in a filtering of edges.
-OBS: Nodes can be isolated in a nework, while edges without an adjacent node cannot exist.
 
 # Centralities
 Measure a specific nodes centrality. 
