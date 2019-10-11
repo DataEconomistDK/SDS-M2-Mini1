@@ -17,7 +17,7 @@ In this assignment i will analyze a network from 21 managers of a high-tec compa
 
 This project is made to be read in html, so open the html file in your preferred webbrowser. As standard the code is hidden in this document, but you can show all by pressing the button "Code" in the top right of the document. You can also show individual chunks of code by pressing the buttons "Code" which are placed around in the document. 
 
-Link for google colab: https://colab.research.google.com/drive/1jxhpHMPpBM7ReDfTKuaNoaAfWT8L8uGt 
+Link for google colab: https://colab.research.google.com/drive/1qnHPYpBX9NlpWdvFfNC5VTdS5qiv9Dat 
 
 Link for github (backup for download): https://github.com/DataEconomistDK/SDS-M2-Mini1 
 
