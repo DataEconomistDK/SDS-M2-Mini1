@@ -321,7 +321,7 @@ set.seed(123)
 g_advice_cent %>% 
   ggraph(layout = 'nicely') + 
   geom_edge_fan(aes(), alpha = 0.25, 
-                arrow = arrow(type = "closed", length = unit(2, "mm")),
+                arrow = arrow(type = "closed", length = unit(4, "mm")),
                 start_cap = circle(1, "mm"),
                 end_cap = circle(1, "mm")
                 ) +
@@ -339,7 +339,7 @@ set.seed(123)
 g_friendship_cent %>% 
   ggraph(layout = 'nicely') + 
   geom_edge_fan(aes(), alpha = 0.25, 
-                arrow = arrow(type = "closed", length = unit(2, "mm")),
+                arrow = arrow(type = "closed", length = unit(4, "mm")),
                 start_cap = circle(1, "mm"),
                 end_cap = circle(1, "mm")
                 ) +
@@ -352,6 +352,6 @@ g_friendship_cent %>%
   ggtitle("Friendship network")
 ```
 
-In general for both networks, we see that the managers in the lowest hierarchical levels (the squares), seems to have the most negative degree difference (indicated by the red color). This tells us that they ask more questions that they are asked, which indicates that they go to their superior for help and advice, and they themselves are not asked for advice. For the friendship network this tells us that people often tend to see their superiors as friends, but the superiors does not see the managers below the in the hierarchy as friends in the same way. 
+In general for both networks, we see that the managers in the lowest hierarchical levels (the squares), seems to have the most negative degree difference (indicated by the red color). This tells us that they ask more questions than they are asked, which indicates that they go to their superior for help and advice, and they themselves are not asked for advice. For the friendship network this tells us that people often tend to see their superiors as friends, but the superiors does not see the managers below in the hierarchy as friends in the same way. 
 
 We also see for both networks, that many managers in the lowest hierarchical levels have very low eigen centrality indicated by their little node size. We also see that all of the vice presidents (indicated by triangles) in general have medium or high eigen centrality. The CEO (indicated by the circle) in both networks only have a medium to above medium size, meaning that they are not as connected to the others in terms of friendship and advice. 
